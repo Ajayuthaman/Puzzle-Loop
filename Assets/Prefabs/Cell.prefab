@@ -98,6 +98,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   WireType: 0
+  IsPowered: 0
   wirePrefabs:
   - {fileID: 7760758649143203208, guid: 914f9a46b1f328a4e943be0a3861c405, type: 3}
   - {fileID: 7760758649143203208, guid: c33e21961bacc6948917723fd698ae8a, type: 3}

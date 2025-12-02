@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class PowerGridManager : MonoBehaviour
 {
@@ -16,6 +17,7 @@ public class PowerGridManager : MonoBehaviour
         cam = Camera.main;
 
         SpawnGrid();
+        UpdatePowerFill();
     }
 
     private void SpawnGrid()
@@ -56,5 +58,44 @@ public class PowerGridManager : MonoBehaviour
         if (r < 0 || c < 0 || r >= level.Row || c >= level.Column) return;
 
         wires[r, c].Rotate();
+
+        // recalc connections after rotation
+        UpdatePowerFill();
     }
+
+    // ---------------------------------------------------------
+    // POWER FILL USING BFS
+    // ---------------------------------------------------------
+    public void UpdatePowerFill()
+    {
+        // Reset
+        foreach (Wire w in wires)
+            w.IsPowered = false;
+
+        Queue<Wire> q = new Queue<Wire>();
+        HashSet<Wire> visited = new HashSet<Wire>();
+
+        // Add all power sources
+        foreach (Wire w in wires)
+        {
+            if (w.WireType == (int)WireType.Power)
+            {
+                w.IsPowered = true;
+                visited.Add(w);
+                q.Enqueue(w);
+            }
+        }
+
+        // BFS
+        while (q.Count > 0)
+        {
+            Wire current = q.Dequeue();
+            current.GetConnectedWires(visited, q);
+        }
+
+        // Update visuals
+        foreach (Wire w in wires)
+            w.UpdateVisual();
+    }
+
 }

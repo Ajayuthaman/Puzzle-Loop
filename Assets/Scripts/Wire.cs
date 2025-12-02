@@ -1,31 +1,63 @@
+using System.Collections;
 using UnityEngine;
-using System.Collections.Generic;
 
 public class Wire : MonoBehaviour
 {
-    public int WireType = 0;
+    public int WireType;
 
     [SerializeField] private Transform[] wirePrefabs;
+    [SerializeField] private float rotationSpeed = 5f;
+
     private Transform currentWire;
+    private int rotation;
+    private bool isRotating;
 
-    private List<Transform> connectionPoints;
+    private const int MAX_ROT = 3;
+    private const int DEG = 90;
+    private static readonly WaitForEndOfFrame waitFrame = new WaitForEndOfFrame();
 
-    private int rotationState = 0;
-
-    public void Init(int encoded)
+    public void Init(int encodedValue)
     {
-        WireType = encoded % 10;
-        int rot = encoded / 10;
+        WireType = encodedValue % 10;
+        rotation = encodedValue / 10;
 
         currentWire = Instantiate(wirePrefabs[WireType], transform);
-        currentWire.localEulerAngles = new Vector3(0, 0, rot * 90);
+        currentWire.localPosition = Vector3.zero;
+
+        currentWire.eulerAngles = new Vector3(0, 0, rotation * DEG);
     }
 
-
-    public void RotateWire()
+    public void Rotate()
     {
-        rotationState = (rotationState + 1) % 4;
+        if (isRotating) return;
 
-        currentWire.eulerAngles = new Vector3(0, 0, rotationState * 90);
+        rotation = (rotation + 1) % (MAX_ROT + 1);
+        StartCoroutine(RotateSmooth());
+    }
+
+    private IEnumerator RotateSmooth()
+    {
+        isRotating = true;
+
+        float startZ = currentWire.eulerAngles.z;
+        float targetZ = rotation * DEG;
+
+        float t = 0;
+        float duration = 1f / rotationSpeed;
+
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            float lerp = Mathf.Clamp01(t / duration);
+            lerp = lerp * lerp * (3f - 2f * lerp);
+
+            float angle = Mathf.LerpAngle(startZ, targetZ, lerp);
+            currentWire.eulerAngles = new Vector3(0, 0, angle);
+
+            yield return waitFrame;
+        }
+
+        currentWire.eulerAngles = new Vector3(0, 0, targetZ);
+        isRotating = false;
     }
 }

@@ -1,101 +1,205 @@
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
+/// <summary>
+/// PowerGridManager: manages spawning level, handling player input,
+/// running the Color-fill power propagation, and checking win condition.
+/// </summary>
 public class PowerGridManager : MonoBehaviour
 {
     public static PowerGridManager Instance;
 
-    [SerializeField] private LevelData level;
-    [SerializeField] private Wire wirePrefab;
+    [SerializeField] private LevelData _level; 
+    [SerializeField] private Wire _cellPrefab; 
+    [SerializeField] private float initialFillDelay = 0.1f; 
+    [SerializeField] private float winDelay = 2f;  
 
+    private bool hasGameFinished;
     private Wire[,] wires;
-    private Camera cam;
+    private List<Wire> powerSources;
+    private Camera mainCamera;
+
+    // BFS helpers for color-fill propagation
+    private Queue<Wire> checkQueue;
+    private HashSet<Wire> visitedWires;
 
     private void Awake()
     {
         Instance = this;
-        cam = Camera.main;
+        hasGameFinished = false;
+        mainCamera = Camera.main;
 
-        SpawnGrid();
-        UpdatePowerFill();
+        checkQueue = new Queue<Wire>();
+        visitedWires = new HashSet<Wire>();
+
+        SpawnLevel();
     }
 
-    private void SpawnGrid()
+    /// <summary>
+    /// Spawn grid based on LevelData SO and instantiate each Wire cell.
+    /// </summary>
+    private void SpawnLevel()
     {
-        wires = new Wire[level.Row, level.Column];
+        wires = new Wire[_level.Rows, _level.Columns];
+        powerSources = new List<Wire>(_level.Rows * _level.Columns / 4);
 
-        for (int r = 0; r < level.Row; r++)
+        for (int i = 0; i < _level.Rows; i++)
         {
-            for (int c = 0; c < level.Column; c++)
+            for (int j = 0; j < _level.Columns; j++)
             {
-                Vector2 pos = new Vector2(c + 0.5f, r + 0.5f);
-                Wire w = Instantiate(wirePrefab, pos, Quaternion.identity);
+                Vector2 spawnPos = new Vector2(j + 0.5f, i + 0.5f);
+                Wire tempWire = Instantiate(_cellPrefab, spawnPos, Quaternion.identity);
 
-                int index = r * level.Column + c;
-                w.Init(level.Cells[index].GetEncodedValue());
+                int index = i * _level.Columns + j;
+                int encodedValue = _level.Cells[index].GetEncodedValue();
+                tempWire.Init(encodedValue);
 
-                wires[r, c] = w;
+                wires[i, j] = tempWire;
+
+                // collect power source wires for flood-fill start
+                if (tempWire.WireType == 1)
+                {
+                    powerSources.Add(tempWire);
+                }
             }
         }
 
-        CenterCamera();
+        SetupCamera();
+        StartCoroutine(InitialFillCheck());
     }
 
-    private void CenterCamera()
+    /// <summary>
+    /// Adjusting the orthographic camera so the entire grid fits nicely on screen.
+    /// </summary>
+    private void SetupCamera()
     {
-        cam.orthographicSize = Mathf.Max(level.Row, level.Column) + 2;
-        cam.transform.position = new Vector3(level.Column / 2f, level.Row / 2f, -10);
+        mainCamera.orthographicSize = Mathf.Max(_level.Rows, _level.Columns) + 2f;
+        Vector3 cameraPos = mainCamera.transform.position;
+        cameraPos.x = _level.Columns * 0.5f;
+        cameraPos.y = _level.Rows * 0.5f;
+        mainCamera.transform.position = cameraPos;
     }
 
+    /// <summary>
+    /// Handle click input to rotate wires.
+    /// Uses world coordinates to find the clicked cell.
+    /// </summary>
     private void Update()
     {
-        if (!Input.GetMouseButtonDown(0)) return;
+        if (hasGameFinished || !Input.GetMouseButtonDown(0)) return;
 
-        Vector3 mouse = cam.ScreenToWorldPoint(Input.mousePosition);
-        int r = Mathf.FloorToInt(mouse.y);
-        int c = Mathf.FloorToInt(mouse.x);
+        Vector3 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+        int row = Mathf.FloorToInt(mousePos.y);
+        int col = Mathf.FloorToInt(mousePos.x);
 
-        if (r < 0 || c < 0 || r >= level.Row || c >= level.Column) return;
+        if (row < 0 || col < 0 || row >= _level.Rows || col >= _level.Columns) return;
 
-        wires[r, c].Rotate();
-
-        // recalc connections after rotation
-        UpdatePowerFill();
+        wires[row, col].UpdateInput();
     }
 
-    // ---------------------------------------------------------
-    // POWER FILL USING BFS
-    // ---------------------------------------------------------
-    public void UpdatePowerFill()
+    /// <summary>
+    /// External call (from Wire) to recalculate power propagation and win state.
+    /// </summary>
+    public void UpdateFillState()
     {
-        // Reset
-        foreach (Wire w in wires)
-            w.IsPowered = false;
+        CheckFill();
+        CheckWin();
+    }
 
-        Queue<Wire> q = new Queue<Wire>();
-        HashSet<Wire> visited = new HashSet<Wire>();
+    private IEnumerator InitialFillCheck()
+    {
+        yield return new WaitForSeconds(initialFillDelay);
+        UpdateFillState();
+    }
 
-        // Add all power sources
-        foreach (Wire w in wires)
+    /// <summary>
+    /// Recalculate which wires are powered using BFS from all power sources.
+    /// </summary>
+    private void CheckFill()
+    {
+        ResetPowerStates();
+        FloodFillFromSources();
+        UpdateVisuals();
+    }
+
+    /// <summary>
+    /// Reset powered state for all non-empty cells so flood-fill can recompute.
+    /// </summary>
+    private void ResetPowerStates()
+    {
+        for (int i = 0; i < _level.Rows; i++)
         {
-            if (w.WireType == (int)WireType.Power)
+            for (int j = 0; j < _level.Columns; j++)
             {
-                w.IsPowered = true;
-                visited.Add(w);
-                q.Enqueue(w);
+                Wire wire = wires[i, j];
+                if (wire.WireType != 0)
+                {
+                    wire.IsPowered = false;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// BFS starting from all power source wires.
+    /// </summary>
+    private void FloodFillFromSources()
+    {
+        checkQueue.Clear();
+        visitedWires.Clear();
+
+        foreach (var wire in powerSources)
+        {
+            checkQueue.Enqueue(wire);
+            visitedWires.Add(wire);
+        }
+
+        while (checkQueue.Count > 0)
+        {
+            Wire current = checkQueue.Dequeue();
+            current.IsPowered = true;
+
+            current.GetConnectedWires(visitedWires, checkQueue);
+        }
+    }
+
+    /// <summary>
+    /// Tell each wire to update its visuals depending on IsPowered.
+    /// </summary>
+    private void UpdateVisuals()
+    {
+        for (int i = 0; i < _level.Rows; i++)
+        {
+            for (int j = 0; j < _level.Columns; j++)
+            {
+                wires[i, j].UpdateFilled();
+            }
+        }
+    }
+
+    /// <summary>
+    /// for Checking if every non-empty cell is powered (win condition).
+    /// </summary>
+    private void CheckWin()
+    {
+        for (int i = 0; i < _level.Rows; i++)
+        {
+            for (int j = 0; j < _level.Columns; j++)
+            {
+                if (!wires[i, j].IsPowered)
+                    return;
             }
         }
 
-        // BFS
-        while (q.Count > 0)
-        {
-            Wire current = q.Dequeue();
-            current.GetConnectedWires(visited, q);
-        }
-
-        // Update visuals
-        foreach (Wire w in wires)
-            w.UpdateVisual();
+        hasGameFinished = true;
+        StartCoroutine(GameFinished());
     }
 
+    private IEnumerator GameFinished()
+    {
+        yield return new WaitForSeconds(winDelay);
+
+        UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+    }
 }

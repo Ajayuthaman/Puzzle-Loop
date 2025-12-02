@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Wire types mapping (numeric values intentionally match level encoding).
+/// </summary>
 public enum WireType
 {
     Empty = 0,
@@ -21,6 +24,10 @@ public enum WireRotation
     Deg270 = 3
 }
 
+/// <summary>
+/// WireCell holds a type and rotation for a single grid cell.
+/// GetEncodedValue returns the same encoding used by the Wire.Init method.
+/// </summary>
 [Serializable]
 public class WireCell
 {
@@ -29,26 +36,40 @@ public class WireCell
 
     public int GetEncodedValue()
     {
-        return (int)Type + ((int)Rotation * 10);
+        // same encoding scheme: type + rotation*10
+        return (int)Type + (int)Rotation * 10;
     }
 }
 
+/// <summary>
+/// LevelData ScriptableObject:
+/// - Stores grid dimensions and a flat list of WireCell entries (Row*Column size)
+/// - OnValidate ensures the list matches Row*Column
+/// </summary>
 [CreateAssetMenu(fileName = "Level", menuName = "Levels/New Level Data")]
 public class LevelData : ScriptableObject
 {
-    public int Row = 3;
-    public int Column = 3;
+    public int Rows = 3;
+    public int Columns = 3;
 
     public List<WireCell> Cells = new List<WireCell>();
 
     private void OnValidate()
     {
-        if (Row < 1) Row = 1;
-        if (Column < 1) Column = 1;
+        if (Rows < 1) Rows = 1;
+        if (Columns < 1) Columns = 1;
 
-        int required = Row * Column;
+        if (Cells == null)
+            Cells = new List<WireCell>();
 
-        while (Cells.Count < required) Cells.Add(new WireCell());
-        while (Cells.Count > required) Cells.RemoveAt(Cells.Count - 1);
+        int required = Rows * Columns;
+        while (Cells.Count < required)
+        {
+            Cells.Add(new WireCell());
+        }
+        while (Cells.Count > required)
+        {
+            Cells.RemoveAt(Cells.Count - 1);
+        }
     }
 }

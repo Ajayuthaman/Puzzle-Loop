@@ -371,8 +371,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 59722aeae44f83045af6978f8e2e374d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  level: {fileID: 11400000, guid: 260a1ed849795194ab3393b7dbdab54a, type: 2}
-  wirePrefab: {fileID: 2317155852989066130, guid: b06e01f7544bacb42917450b52531088, type: 3}
+  _level: {fileID: 11400000, guid: 260a1ed849795194ab3393b7dbdab54a, type: 2}
+  _cellPrefab: {fileID: 2317155852989066130, guid: b06e01f7544bacb42917450b52531088, type: 3}
+  initialFillDelay: 0.1
+  winDelay: 2
 --- !u!4 &1117494448
 Transform:
   m_ObjectHideFlags: 0

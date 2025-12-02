@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e062b36e0fd3a34f8212ad19d3a512e, type: 3}
   m_Name: Level 1
   m_EditorClassIdentifier: 
-  Row: 4
-  Column: 3
+  Rows: 3
+  Columns: 3
   Cells:
   - Type: 1
-    Rotation: 2
+    Rotation: 1
   - Type: 3
     Rotation: 2
   - Type: 4
@@ -33,9 +33,3 @@ MonoBehaviour:
     Rotation: 0
   - Type: 2
     Rotation: 1
-  - Type: 3
-    Rotation: 0
-  - Type: 4
-    Rotation: 0
-  - Type: 5
-    Rotation: 0

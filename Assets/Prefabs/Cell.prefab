@@ -97,9 +97,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 830715801063a2e4486e360901b2f38e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  WireType: 0
   IsPowered: 0
-  wirePrefabs:
+  WireType: 0
+  _wirePrefabs:
   - {fileID: 7760758649143203208, guid: 914f9a46b1f328a4e943be0a3861c405, type: 3}
   - {fileID: 7760758649143203208, guid: c33e21961bacc6948917723fd698ae8a, type: 3}
   - {fileID: 7760758649143203208, guid: a5b270586e02f9746b7e74daa463a8af, type: 3}

@@ -204,7 +204,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.18049128, g: 0.19835053, b: 0.2264151, a: 0}
+  m_BackGroundColor: {r: 0.11400856, g: 0.12153645, b: 0.13207549, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -373,7 +373,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Rows: 3
   Columns: 3
-  wirePrefab: {fileID: -4216378199324510234, guid: 01cf889338b989645bd3fa429938db58, type: 3}
+  wirePrefab: {fileID: 2317155852989066130, guid: b06e01f7544bacb42917450b52531088, type: 3}
 --- !u!4 &1117494448
 Transform:
   m_ObjectHideFlags: 0

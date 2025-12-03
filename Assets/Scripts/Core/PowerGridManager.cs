@@ -42,7 +42,6 @@ public class PowerGridManager : MonoBehaviour
     {
         hasGameFinished = false;
         mainCamera = Camera.main;
-        sceneController = FindObjectOfType<LevelSceneController>();
 
         checkQueue = new Queue<Wire>();
         visitedWires = new HashSet<Wire>();
@@ -187,6 +186,7 @@ public class PowerGridManager : MonoBehaviour
 
         if (_currentLevel == null) return;
 
+        AudioManager.Instance.PlayClick();
         Vector3 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
         int row = Mathf.FloorToInt(mousePos.y);
         int col = Mathf.FloorToInt(mousePos.x);
@@ -321,7 +321,7 @@ public class PowerGridManager : MonoBehaviour
         {
             LevelSaveManager.Instance.CompleteLevel(levelIndex, score);
         }
-
+        AudioManager.Instance.PlayWin();
         StartCoroutine(GameFinished());
     }
 

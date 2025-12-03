@@ -19,8 +19,6 @@ public class LevelsMenuController : MonoBehaviour
 
         CreateLevelButtons();
         RefreshLevelsDisplay();
-
-        StartCoroutine(ScrollToCurrentLevel());
     }
 
     /// <summary>
@@ -86,6 +84,8 @@ public class LevelsMenuController : MonoBehaviour
 
             button.UpdateState(unlocked, completed);
         }
+
+        StartCoroutine(ScrollToCurrentLevel());
     }
 
     private void OnLevelClicked(int levelIndex)

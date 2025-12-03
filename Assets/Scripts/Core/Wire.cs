@@ -137,10 +137,7 @@ public class Wire : MonoBehaviour
         isRotating = false;
 
         // Ask the manager to recalculate power propagation now that this wire moved
-        if (PowerGridManager.Instance != null)
-        {
-            PowerGridManager.Instance.UpdateFillState();
-        }
+        EventManager.UpdateFillState?.Invoke();
     }
 
     /// <summary>

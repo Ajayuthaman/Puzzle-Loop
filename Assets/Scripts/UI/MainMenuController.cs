@@ -12,6 +12,7 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private Button quitButton;
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject levelsMenuPanel;
+    [SerializeField] private LevelsMenuController levelsController;
 
     [Header("Scene References")]
     [SerializeField] private string gameSceneName = "GameScene";
@@ -21,13 +22,6 @@ public class MainMenuController : MonoBehaviour
         // Initialize button listeners
         playButton.onClick.AddListener(OnPlayClicked);
         quitButton.onClick.AddListener(OnQuitClicked);
-
-        // Ensure LevelSaveManager exists
-        if (FindObjectOfType<LevelSaveManager>() == null)
-        {
-            GameObject saveManager = new GameObject("SaveManager");
-            saveManager.AddComponent<LevelSaveManager>();
-        }
 
         // Show main menu, hide levels menu
         mainMenuPanel.SetActive(true);
@@ -42,8 +36,6 @@ public class MainMenuController : MonoBehaviour
         mainMenuPanel.SetActive(false);
         levelsMenuPanel.SetActive(true);
 
-        // Refresh levels display if needed
-        LevelsMenuController levelsController = levelsMenuPanel.GetComponent<LevelsMenuController>();
         if (levelsController != null)
         {
             levelsController.RefreshLevelsDisplay();
@@ -76,7 +68,6 @@ public class MainMenuController : MonoBehaviour
     /// </summary>
     public void LoadLevel(int levelIndex)
     {
-        PlayerPrefs.SetInt("SelectedLevel", levelIndex);
         SceneManager.LoadScene(gameSceneName);
     }
 }

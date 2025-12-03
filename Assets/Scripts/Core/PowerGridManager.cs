@@ -1,6 +1,7 @@
-using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// PowerGridManager: manages spawning level, handling player input,
@@ -8,12 +9,13 @@ using System.Collections.Generic;
 /// </summary>
 public class PowerGridManager : MonoBehaviour
 {
-    public static PowerGridManager Instance;
+    [SerializeField] private Wire _cellPrefab;
+    [SerializeField] private float initialFillDelay = 0.1f;
+    [SerializeField] private float winDelay = 2f;
+    [SerializeField] private LevelSceneController sceneController;
 
-    [SerializeField] private LevelData _level; 
-    [SerializeField] private Wire _cellPrefab; 
-    [SerializeField] private float initialFillDelay = 0.1f; 
-    [SerializeField] private float winDelay = 2f;  
+    // Current level reference
+    private LevelData _currentLevel;
 
     private bool hasGameFinished;
     private Wire[,] wires;
@@ -24,35 +26,94 @@ public class PowerGridManager : MonoBehaviour
     private Queue<Wire> checkQueue;
     private HashSet<Wire> visitedWires;
 
+    // Scene controller reference
+
+    private void OnEnable()
+    {
+        EventManager.UpdateFillState += UpdateFillState;
+    }
+
+    private void OnDisable()
+    {
+        EventManager.UpdateFillState -= UpdateFillState;
+    }
+
     private void Awake()
     {
-        Instance = this;
         hasGameFinished = false;
         mainCamera = Camera.main;
+        sceneController = FindObjectOfType<LevelSceneController>();
 
         checkQueue = new Queue<Wire>();
         visitedWires = new HashSet<Wire>();
 
-        SpawnLevel();
+        LoadSelectedLevel();
     }
 
     /// <summary>
-    /// Spawn grid based on LevelData SO and instantiate each Wire cell.
+    /// Load the level selected from menu
+    /// </summary>
+    private void LoadSelectedLevel()
+    {
+        int levelIndex = LevelSaveManager.Instance.GetCurrentLevelIndex();
+        LoadLevel(levelIndex);
+    }
+
+    /// <summary>
+    /// Load a specific level by index
+    /// </summary>
+    public void LoadLevel(int levelIndex)
+    {
+        if (LevelManager.Instance == null)
+        {
+            Debug.LogError("LevelManager not found! Make sure it's in the scene.");
+            return;
+        }
+
+        LevelData levelData = LevelManager.Instance.GetLevelData(levelIndex);
+
+        if (levelData == null)
+        {
+            Debug.LogError($"Failed to load level {levelIndex}");
+            return;
+        }
+
+        _currentLevel = levelData;
+        SpawnLevel();
+
+        // Update scene controller
+        if (sceneController != null)
+        {
+            sceneController.SetCurrentLevel(levelIndex);
+        }
+    }
+
+    /// <summary>
+    /// Spawn grid based on current LevelData SO
     /// </summary>
     private void SpawnLevel()
     {
-        wires = new Wire[_level.Rows, _level.Columns];
-        powerSources = new List<Wire>(_level.Rows * _level.Columns / 4);
+        // Clear existing grid if any
+        ClearExistingGrid();
 
-        for (int i = 0; i < _level.Rows; i++)
+        if (_currentLevel == null)
         {
-            for (int j = 0; j < _level.Columns; j++)
+            Debug.LogError("No level data to spawn!");
+            return;
+        }
+
+        wires = new Wire[_currentLevel.Rows, _currentLevel.Columns];
+        powerSources = new List<Wire>(_currentLevel.Rows * _currentLevel.Columns / 4);
+
+        for (int i = 0; i < _currentLevel.Rows; i++)
+        {
+            for (int j = 0; j < _currentLevel.Columns; j++)
             {
                 Vector2 spawnPos = new Vector2(j + 0.5f, i + 0.5f);
                 Wire tempWire = Instantiate(_cellPrefab, spawnPos, Quaternion.identity);
 
-                int index = i * _level.Columns + j;
-                int encodedValue = _level.Cells[index].GetEncodedValue();
+                int index = i * _currentLevel.Columns + j;
+                int encodedValue = _currentLevel.Cells[index].GetEncodedValue();
                 tempWire.Init(encodedValue);
 
                 wires[i, j] = tempWire;
@@ -70,15 +131,50 @@ public class PowerGridManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Clear existing grid before spawning new one
+    /// </summary>
+    private void ClearExistingGrid()
+    {
+        if (wires != null)
+        {
+            for (int i = 0; i < wires.GetLength(0); i++)
+            {
+                for (int j = 0; j < wires.GetLength(1); j++)
+                {
+                    if (wires[i, j] != null)
+                    {
+                        Destroy(wires[i, j].gameObject);
+                    }
+                }
+            }
+        }
+
+        if (powerSources != null)
+        {
+            powerSources.Clear();
+        }
+
+        hasGameFinished = false;
+    }
+
+    /// <summary>
     /// Adjusting the orthographic camera so the entire grid fits nicely on screen.
     /// </summary>
     private void SetupCamera()
     {
-        mainCamera.orthographicSize = Mathf.Max(_level.Rows, _level.Columns) + 2f;
-        Vector3 cameraPos = mainCamera.transform.position;
-        cameraPos.x = _level.Columns * 0.5f;
-        cameraPos.y = _level.Rows * 0.5f;
-        mainCamera.transform.position = cameraPos;
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+        }
+
+        if (_currentLevel != null)
+        {
+            mainCamera.orthographicSize = Mathf.Max(_currentLevel.Rows, _currentLevel.Columns) + 2f;
+            Vector3 cameraPos = mainCamera.transform.position;
+            cameraPos.x = _currentLevel.Columns * 0.5f;
+            cameraPos.y = _currentLevel.Rows * 0.5f;
+            mainCamera.transform.position = cameraPos;
+        }
     }
 
     /// <summary>
@@ -89,13 +185,18 @@ public class PowerGridManager : MonoBehaviour
     {
         if (hasGameFinished || !Input.GetMouseButtonDown(0)) return;
 
+        if (_currentLevel == null) return;
+
         Vector3 mousePos = mainCamera.ScreenToWorldPoint(Input.mousePosition);
         int row = Mathf.FloorToInt(mousePos.y);
         int col = Mathf.FloorToInt(mousePos.x);
 
-        if (row < 0 || col < 0 || row >= _level.Rows || col >= _level.Columns) return;
+        if (row < 0 || col < 0 || row >= _currentLevel.Rows || col >= _currentLevel.Columns) return;
 
-        wires[row, col].UpdateInput();
+        if (wires[row, col] != null)
+        {
+            wires[row, col].UpdateInput();
+        }
     }
 
     /// <summary>
@@ -128,9 +229,11 @@ public class PowerGridManager : MonoBehaviour
     /// </summary>
     private void ResetPowerStates()
     {
-        for (int i = 0; i < _level.Rows; i++)
+        if (_currentLevel == null) return;
+
+        for (int i = 0; i < _currentLevel.Rows; i++)
         {
-            for (int j = 0; j < _level.Columns; j++)
+            for (int j = 0; j < _currentLevel.Columns; j++)
             {
                 Wire wire = wires[i, j];
                 if (wire.WireType != 0)
@@ -169,9 +272,11 @@ public class PowerGridManager : MonoBehaviour
     /// </summary>
     private void UpdateVisuals()
     {
-        for (int i = 0; i < _level.Rows; i++)
+        if (_currentLevel == null) return;
+
+        for (int i = 0; i < _currentLevel.Rows; i++)
         {
-            for (int j = 0; j < _level.Columns; j++)
+            for (int j = 0; j < _currentLevel.Columns; j++)
             {
                 wires[i, j].UpdateFilled();
             }
@@ -179,27 +284,60 @@ public class PowerGridManager : MonoBehaviour
     }
 
     /// <summary>
-    /// for Checking if every non-empty cell is powered (win condition).
+    /// Check win condition
     /// </summary>
     private void CheckWin()
     {
-        for (int i = 0; i < _level.Rows; i++)
+        if (_currentLevel == null) return;
+
+        for (int i = 0; i < _currentLevel.Rows; i++)
         {
-            for (int j = 0; j < _level.Columns; j++)
+            for (int j = 0; j < _currentLevel.Columns; j++)
             {
                 if (!wires[i, j].IsPowered)
                     return;
             }
         }
 
+        HandleLevelCompletion();
+    }
+
+    /// <summary>
+    /// Handle level completion with save system
+    /// </summary>
+    private void HandleLevelCompletion()
+    {
         hasGameFinished = true;
+
+        // Get current level index from LevelSaveManager
+        int levelIndex = LevelSaveManager.Instance.GetCurrentLevelIndex();
+
+        int score = CalculateScore();
+
+        Debug.Log($"Level {levelIndex} completed with score: {score}");
+
+        // Save progress using LevelSaveManager
+        if (LevelSaveManager.Instance != null)
+        {
+            LevelSaveManager.Instance.CompleteLevel(levelIndex, score);
+        }
+
         StartCoroutine(GameFinished());
+    }
+
+    private int CalculateScore()
+    {
+        return 100;
     }
 
     private IEnumerator GameFinished()
     {
         yield return new WaitForSeconds(winDelay);
 
-        UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+        // Show win panel
+        if (sceneController != null)
+        {
+            sceneController.ShowWinPanel();
+        }
     }
 }

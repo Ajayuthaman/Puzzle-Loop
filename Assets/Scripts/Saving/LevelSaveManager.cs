@@ -16,6 +16,7 @@ public class LevelSaveManager : MonoBehaviour
         public int highestLevelUnlocked = 1;
         public List<bool> levelCompletion = new List<bool>();
         public List<int> levelScores = new List<int>();
+        public int currentLevelIndex = 0;
 
         public SaveData()
         {
@@ -23,6 +24,7 @@ public class LevelSaveManager : MonoBehaviour
             highestLevelUnlocked = 1;
             levelCompletion = new List<bool>();
             levelScores = new List<int>();
+            currentLevelIndex = 0;
         }
     }
 
@@ -127,7 +129,7 @@ public class LevelSaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Complete a level and unlock next one
+    /// Complete a level and unlock next one (updated)
     /// </summary>
     public void CompleteLevel(int levelIndex, int score = 0)
     {
@@ -155,7 +157,47 @@ public class LevelSaveManager : MonoBehaviour
             currentSaveData.highestLevelUnlocked = levelIndex + 2;
         }
 
+        // Update current level to this completed level
+        currentSaveData.currentLevelIndex = levelIndex;
+
         SaveGameData();
+
+        Debug.Log($"Completed level {levelIndex}, unlocked up to level {currentSaveData.highestLevelUnlocked - 1}");
+    }
+
+    /// <summary>
+    /// Set the current level being played
+    /// </summary>
+    public void SetCurrentLevel(int levelIndex)
+    {
+        if (levelIndex >= 0 && levelIndex < GetLevelCountFromManager())
+        {
+            currentSaveData.currentLevelIndex = levelIndex;
+            SaveGameData();
+            Debug.Log($"Set current level to {levelIndex}");
+        }
+    }
+
+    /// <summary>
+    /// Get the current level index
+    /// </summary>
+    public int GetCurrentLevelIndex()
+    {
+        return currentSaveData.currentLevelIndex;
+    }
+
+    /// <summary>
+    /// Get total level count from LevelManager (helper method)
+    /// </summary>
+    private int GetLevelCountFromManager()
+    {
+        if (LevelManager.Instance != null)
+        {
+            return LevelManager.Instance.GetLevelCount();
+        }
+
+        // Fallback: use the highest unlocked level
+        return currentSaveData.highestLevelUnlocked;
     }
 
     /// <summary>

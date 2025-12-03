@@ -1,4 +1,4 @@
-# 🔌 Power Grid Puzzle — Unity Project
+# 🔌 Puzzle Loop — Unity Project
 
 A complete modular puzzle system where players rotate wire pieces to connect power across a grid.
 Includes level loading, rotation logic, BFS-based power propagation, win detection, UI flow, save system, and audio manager hooks.

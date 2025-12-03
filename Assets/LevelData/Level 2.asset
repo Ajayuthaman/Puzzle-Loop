@@ -12,38 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e062b36e0fd3a34f8212ad19d3a512e, type: 3}
   m_Name: Level 2
   m_EditorClassIdentifier: 
-  Rows: 4
-  Columns: 4
+  Rows: 3
+  Columns: 3
   Cells:
-  - Type: 0
-    Rotation: 1
-  - Type: 0
+  - Type: 1
+    Rotation: 2
+  - Type: 4
+    Rotation: 2
+  - Type: 2
+    Rotation: 0
+  - Type: 3
+    Rotation: 0
+  - Type: 5
     Rotation: 2
   - Type: 4
     Rotation: 0
-  - Type: 2
-    Rotation: 0
-  - Type: 0
-    Rotation: 2
-  - Type: 2
-    Rotation: 0
-  - Type: 0
+  - Type: 4
     Rotation: 1
+  - Type: 4
+    Rotation: 0
   - Type: 2
-    Rotation: 0
-  - Type: 0
     Rotation: 1
-  - Type: 0
-    Rotation: 0
-  - Type: 6
-    Rotation: 0
-  - Type: 0
-    Rotation: 0
-  - Type: 0
-    Rotation: 0
-  - Type: 0
-    Rotation: 0
-  - Type: 0
-    Rotation: 0
-  - Type: 0
-    Rotation: 0
